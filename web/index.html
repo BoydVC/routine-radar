@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Routine Radar</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div>
+        <h1>📡 Routine Radar</h1>
+        <p class="sub">Boyd’s Grok Bot routines · live scope · read-only fleet snapshot</p>
+      </div>
+      <div class="kpis" id="kpis"></div>
+    </header>
+
+    <div class="filters" id="filters">
+      <button class="chip active" data-f="all">All</button>
+      <button class="chip" data-f="enabled">Enabled</button>
+      <button class="chip" data-f="paused">Paused</button>
+      <button class="chip" data-f="cron">Cron</button>
+      <button class="chip" data-f="event">Event</button>
+      <button class="chip" data-f="weekday">Weekday</button>
+      <button class="chip" data-f="quiet">Quiet hours</button>
+      <label class="search"><input id="q" type="search" placeholder="Filter bots / routines…" autocomplete="off"></label>
+    </div>
+
+    <main class="main">
+      <section class="scope">
+        <canvas id="radar" width="640" height="640" aria-label="Routine radar scope"></canvas>
+        <div class="scope-hint">Click a blip · sweep = now</div>
+      </section>
+      <aside class="panel">
+        <div id="list" class="list"></div>
+        <div id="detail" class="detail empty">
+          <div class="empty-msg">Select a routine blip or row</div>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="foot">
+      <span id="gen"></span>
+      · TokenMax · offline snapshot safe · nothing sent
+    </footer>
+  </div>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
