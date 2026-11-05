@@ -72,7 +72,7 @@
     },
     {
       "id": "7e4990fe-38aa-4d6d-aa6b-c87baad5f8d1",
-      "name": "Vic Tutor",
+      "name": "Sam Tutor",
       "title": "6th Grade Tutor",
       "color": "#22d3ee",
       "avatarColor": "orange",
@@ -153,7 +153,7 @@
     },
     {
       "id": "ff5dfcd2-09b9-49dd-952f-14893da73ab0",
-      "name": "Char Tutor",
+      "name": "Alex Tutor",
       "title": "8th Grade Tutor",
       "color": "#fdba74",
       "avatarColor": "violet",
@@ -165,8 +165,8 @@
     {
       "id": "char-weeknight-homework-check-in",
       "botId": "ff5dfcd2-09b9-49dd-952f-14893da73ab0",
-      "botName": "Char Tutor",
-      "name": "Char weeknight homework check-in",
+      "botName": "Alex Tutor",
+      "name": "Alex weeknight homework check-in",
       "enabled": true,
       "triggerType": "cron",
       "cron": "45 17 * * *",
@@ -185,8 +185,8 @@
     {
       "id": "vic-weeknight-homework-check-in",
       "botId": "7e4990fe-38aa-4d6d-aa6b-c87baad5f8d1",
-      "botName": "Vic Tutor",
-      "name": "Vic weeknight homework check-in",
+      "botName": "Sam Tutor",
+      "name": "Sam weeknight homework check-in",
       "enabled": true,
       "triggerType": "cron",
       "cron": "15 18 * * *",
