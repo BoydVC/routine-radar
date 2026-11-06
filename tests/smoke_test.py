@@ -54,6 +54,42 @@ for r in snap.get("routines") or []:
         leak = True
 check(not leak, "snapshot has no routine prompt fields")
 
+import importlib.util
+_spec = importlib.util.spec_from_file_location("collect", os.path.join(HERE, "collect.py"))
+_collect = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_collect)
+_cases = {
+    "Char Tutor": "Riley Tutor",
+    "CHAR TUTOR": "RILEY TUTOR",
+    "Vic Tutor": "Jordan Tutor",
+    "Charlotte's class": "Riley's class",
+    "Victor": "Jordan",
+    "Miranda": "Sam",
+    "Boyd Family Times": "Alex Family Times",
+    "Boyd's radar": "Alex's radar",
+    "Boyd’s radar": "Alex’s radar",
+    "boyd_msg": "alex_msg",
+    "BOYD_MSG": "ALEX_MSG",
+    "Spalding": "Northside Academy",
+    "St. Mary's": "Northside Academy",
+    "char-weeknight": "ri-weeknight",
+    "vic-weeknight": "jo-weeknight",
+}
+for src, dst in _cases.items():
+    check(_collect.scrub_text(src) == dst, f"scrub {src!r} → {dst!r} (got {_collect.scrub_text(src)!r})")
+_kept = ["BoydVC", "@chrisalexboyd", "Victoria", "victory", "charset", "device-width", "devicePixelRatio", "Bill Simmons"]
+for src in _kept:
+    check(_collect.scrub_text(src) == src, f"scrub keeps {src!r}")
+
+_deny = re.compile(r"(?i)(?<![A-Za-z0-9_])(Charlotte|Char|Victor|Vic|Miranda|Boyd|Spalding)(?![A-Za-z0-9_])")
+_msg = re.compile(r"(?i)(?<![A-Za-z0-9])boyd_msg(?![A-Za-z0-9])")
+_js = open(os.path.join(HERE, "web", "data.js"), encoding="utf-8").read()
+_payload = _js.split("window.RR_DATA = ", 1)[1].strip().rstrip(";")
+check(json.loads(_payload) == snap, "data.js payload matches snapshot.json")
+for label, text in (("snapshot", json.dumps(snap)), ("data.js", _js), ("dist", html)):
+    hits = _deny.findall(text) + _msg.findall(text)
+    check(not hits, f"no family-name whole words in {label} ({hits[:6]})")
+
 
 def free(p):
     with socket.socket() as s:

@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Routine Radar</title>
+  <style>
+:root {
+  --bg: #070d18;
+  --panel: #0e1730;
+  --line: #1e2f55;
+  --text: #e8eefc;
+  --muted: #8fa3c9;
+  --accent: #3dff9a;
+  --amber: #fbbf24;
+  --rose: #f87171;
+  --blue: #60a5fa;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: radial-gradient(900px 500px at 30% -10%, #132447, var(--bg)); color: var(--text); font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+.app { max-width: 1280px; margin: 0 auto; padding: 20px 22px 40px; }
+.top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; align-items: flex-start; }
+h1 { margin: 0; font-size: 26px; letter-spacing: -0.02em; }
+.sub { margin: 4px 0 0; color: var(--muted); }
+.kpis { display: flex; flex-wrap: wrap; gap: 8px; }
+.kpi { background: linear-gradient(180deg, #142038, #0f1a2e); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; min-width: 72px; text-align: center; box-shadow: 0 6px 16px rgba(0,0,0,.25); }
+.kpi .v { font-weight: 800; font-size: 18px; }
+.kpi .l { color: var(--muted); font-size: 11px; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 12px; align-items: center; }
+.chip { background: #121c34; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; cursor: pointer; font: inherit; }
+.chip:hover { color: var(--text); border-color: #3d5a94; }
+.chip.active { color: #04120a; background: var(--accent); border-color: var(--accent); font-weight: 700; }
+.search input { background: #121c34; border: 1px solid var(--line); color: var(--text); border-radius: 999px; padding: 7px 12px; min-width: 180px; outline: none; }
+.search input:focus { border-color: var(--blue); }
+.main { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(300px, 420px); gap: 16px; align-items: start; }
+.scope { position: relative; background: radial-gradient(circle at 50% 50%, #0c1a33 0%, #060b16 70%); border: 1px solid var(--line); border-radius: 18px; padding: 12px; box-shadow: inset 0 0 60px rgba(61,255,154,.05), 0 10px 30px rgba(0,0,0,.35); }
+#radar { width: 100%; height: auto; display: block; border-radius: 12px; cursor: crosshair; }
+.scope-hint { position: absolute; left: 18px; bottom: 14px; color: var(--muted); font-size: 11px; pointer-events: none; }
+.panel { display: flex; flex-direction: column; gap: 12px; min-height: 480px; }
+.list { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; max-height: 320px; overflow: auto; }
+.row { display: grid; grid-template-columns: 10px 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-bottom: 1px solid #16233f; cursor: pointer; }
+.row:hover, .row.sel { background: #15233f; }
+.dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+.row .name { font-weight: 600; }
+.row .meta { color: var(--muted); font-size: 12px; }
+.row .eta { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--accent); white-space: nowrap; }
+.row.paused .eta { color: var(--muted); }
+.row.bad .eta { color: var(--rose); }
+.detail { background: linear-gradient(165deg, #142038, #0f1a2e); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; min-height: 180px; flex: 1; }
+.detail.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.detail h2 { margin: 0 0 6px; font-size: 18px; }
+.detail .bot { color: var(--muted); margin-bottom: 10px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+.tag { font-size: 11px; border-radius: 999px; padding: 3px 8px; background: #16233f; color: #c3d1ee; }
+.tag.on { background: rgba(61,255,154,.15); color: var(--accent); }
+.tag.off { background: rgba(148,163,184,.15); color: var(--muted); }
+.tag.warn { background: rgba(251,191,36,.15); color: var(--amber); }
+.tag.err { background: rgba(248,113,113,.15); color: var(--rose); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cell { background: #0c1528; border-radius: 10px; padding: 8px 10px; }
+.cell .l { color: var(--muted); font-size: 11px; }
+.cell .v { font-weight: 650; word-break: break-word; }
+.cell code { color: var(--amber); font-size: 12px; }
+.foot { margin-top: 16px; color: var(--muted); font-size: 12px; }
+@media (max-width: 900px) {
+  .main { grid-template-columns: 1fr; }
+  .list { max-height: 240px; }
+}
+
+</style>
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div>
+        <h1>📡 Routine Radar</h1>
+        <p class="sub">Alex’s Grok Bot routines · live scope · read-only fleet snapshot</p>
+      </div>
+      <div class="kpis" id="kpis"></div>
+    </header>
+
+    <div class="filters" id="filters">
+      <button class="chip active" data-f="all">All</button>
+      <button class="chip" data-f="enabled">Enabled</button>
+      <button class="chip" data-f="paused">Paused</button>
+      <button class="chip" data-f="cron">Cron</button>
+      <button class="chip" data-f="event">Event</button>
+      <button class="chip" data-f="weekday">Weekday</button>
+      <button class="chip" data-f="quiet">Quiet hours</button>
+      <label class="search"><input id="q" type="search" placeholder="Filter bots / routines…" autocomplete="off"></label>
+    </div>
+
+    <main class="main">
+      <section class="scope">
+        <canvas id="radar" width="640" height="640" aria-label="Routine radar scope"></canvas>
+        <div class="scope-hint">Click a blip · sweep = now</div>
+      </section>
+      <aside class="panel">
+        <div id="list" class="list"></div>
+        <div id="detail" class="detail empty">
+          <div class="empty-msg">Select a routine blip or row</div>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="foot">
+      <span id="gen"></span>
+      · TokenMax · offline snapshot safe · nothing sent
+    </footer>
+  </div>
+  <script>
+/* generated by collect.py — do not edit */
+window.RR_DATA = {"generatedAt":"2026-10-09T13:32:24.306194-04:00","timezone":"America/New_York","sources":{"root":"/home/box/agent-data/agents","bots":17,"routines":15},"bots":[{"id":"3e3aaa23-1281-43d0-9cac-e38e22ba5be0","name":"Kelly","title":"Trends","color":"#4ade80","avatarColor":"yellow","routineCount":0,"enabledCount":0},{"id":"4f8fdf55-07d3-4a86-8889-ce26a1565e51","name":"Engineering Lead","title":"","color":"#60a5fa","avatarColor":"blue","routineCount":0,"enabledCount":0},{"id":"4feb1fc5-075b-4294-a694-3fa562e5785b","name":"Michael","title":"Chief of Staff","color":"#fbbf24","avatarColor":"red","routineCount":2,"enabledCount":0},{"id":"5ea76ec0-2e44-46be-993a-11bc6ba30958","name":"Oscar","title":"Finances","color":"#f472b6","avatarColor":"green","routineCount":3,"enabledCount":3},{"id":"6a33ea82-5497-43fa-a644-aebed89a6bf6","name":"Ryan","title":"Entrepreneur","color":"#a78bfa","avatarColor":"red","routineCount":1,"enabledCount":1},{"id":"759c205a-40a5-4e74-9620-3c04714824f4","name":"Dr. EggBot","title":"Bot Creator","color":"#34d399","avatarColor":"red","routineCount":2,"enabledCount":2},{"id":"784bedfc-74d6-45a0-a291-762ff05bb0c6","name":"Alex Family Times","title":"","color":"#fb923c","avatarColor":"#fb923c","routineCount":0,"enabledCount":0},{"id":"7e4990fe-38aa-4d6d-aa6b-c87baad5f8d1","name":"Jordan Tutor","title":"6th Grade Tutor","color":"#22d3ee","avatarColor":"orange","routineCount":1,"enabledCount":1},{"id":"84ee99ac-e314-4642-a27b-89b81a591547","name":"Brief","title":"Morning Brief","color":"#e879f9","avatarColor":"gray","routineCount":1,"enabledCount":1},{"id":"9abbfaf4-f401-4e70-8619-da598173399a","name":"Jim","title":"Interests","color":"#f87171","avatarColor":"blue","routineCount":3,"enabledCount":3},{"id":"b56dd939-08e7-4c0a-82af-140a51de11b4","name":"TokenMax","title":"","color":"#94a3b8","avatarColor":"magenta","routineCount":0,"enabledCount":0},{"id":"d0afda46-7287-40c1-b934-70ab9225584e","name":"Dwight","title":"Code Monkey","color":"#c084fc","avatarColor":"yellow","routineCount":0,"enabledCount":0},{"id":"d26b92da-570a-4d65-bd17-86efa401a125","name":"New Bot","title":"","color":"#2dd4bf","avatarColor":"#2dd4bf","routineCount":0,"enabledCount":0},{"id":"e1bfeb52-89c2-48fa-b6dd-b4dcf9ed54e1","name":"Pam","title":"Family Logistics","color":"#facc15","avatarColor":"cyan","routineCount":1,"enabledCount":1},{"id":"ed1121b7-dd17-4061-880f-70ebed7c8250","name":"Pods","title":"","color":"#38bdf8","avatarColor":"#38bdf8","routineCount":0,"enabledCount":0},{"id":"fd400f67-24e0-40fd-9d9f-fcdcb2969805","name":"Path","title":"High School Path","color":"#86efac","avatarColor":"#86efac","routineCount":0,"enabledCount":0},{"id":"ff5dfcd2-09b9-49dd-952f-14893da73ab0","name":"Riley Tutor","title":"8th Grade Tutor","color":"#fdba74","avatarColor":"violet","routineCount":1,"enabledCount":1}],"routines":[{"id":"ri-weeknight-homework-check-in","botId":"ff5dfcd2-09b9-49dd-952f-14893da73ab0","botName":"Riley Tutor","name":"Riley weeknight homework check-in","enabled":true,"triggerType":"cron","cron":"45 17 * * *","weekdayOnly":false,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-09-09T19:03:06.213000-04:00","nextFireAt":"2026-10-09T17:45:00-04:00","etaSeconds":15155.693806,"etaLabel":"4h 12m","runCount":7,"angle":2.6704,"radius":0.5945,"color":"#fdba74"},{"id":"jo-weeknight-homework-check-in","botId":"7e4990fe-38aa-4d6d-aa6b-c87baad5f8d1","botName":"Jordan Tutor","name":"Jordan weeknight homework check-in","enabled":true,"triggerType":"cron","cron":"15 18 * * *","weekdayOnly":false,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-09-09T19:20:51.090000-04:00","nextFireAt":"2026-10-09T18:15:00-04:00","etaSeconds":16955.693806,"etaLabel":"4h 42m","runCount":7,"angle":2.6704,"radius":0.2695,"color":"#22d3ee"},{"id":"jim-daily-interest-note","botId":"9abbfaf4-f401-4e70-8619-da598173399a","botName":"Jim","name":"Jim daily interest note","enabled":true,"triggerType":"cron","cron":"0 20 * * *","weekdayOnly":false,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-09-08T20:19:30.109000-04:00","nextFireAt":"2026-10-09T20:00:00-04:00","etaSeconds":23255.693806,"etaLabel":"6h 27m","runCount":8,"angle":3.5081,"radius":0.6465,"color":"#f87171"},{"id":"daily-podcast-listen-brief","botId":"9abbfaf4-f401-4e70-8619-da598173399a","botName":"Jim","name":"Daily podcast listen brief","enabled":true,"triggerType":"cron","cron":"0 7 * * *","weekdayOnly":false,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-09-10T07:08:50.966000-04:00","nextFireAt":"2026-10-10T07:00:00-04:00","etaSeconds":62855.693806,"etaLabel":"17h 27m","runCount":6,"angle":0.8901,"radius":0.5815,"color":"#f87171"},{"id":"bill-simmons-sunday-107-fifth-pick","botId":"9abbfaf4-f401-4e70-8619-da598173399a","botName":"Jim","name":"Bill Simmons Sunday 107 fifth pick","enabled":true,"triggerType":"cron","cron":"0 11,15 * * 0","weekdayOnly":false,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-09-13T11:21:28.897000-04:00","nextFireAt":"2026-10-11T11:00:00-04:00","etaSeconds":163655.693806,"etaLabel":"1d 21h","runCount":2,"angle":2.6704,"radius":0.3345,"color":"#f87171"},{"id":"transcript-healthcheck","botId":"759c205a-40a5-4e74-9620-3c04714824f4","botName":"Dr. EggBot","name":"transcript-healthcheck","enabled":true,"triggerType":"cron","cron":"30 6 * * 1-5","weekdayOnly":true,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-09-07T06:37:02.955000-04:00","nextFireAt":"2026-10-12T06:30:00-04:00","etaSeconds":233855.693806,"etaLabel":"2d 16h","runCount":7,"angle":0.4712,"radius":0.6205,"color":"#34d399"},{"id":"routine-healthcheck","botId":"759c205a-40a5-4e74-9620-3c04714824f4","botName":"Dr. EggBot","name":"routine-healthcheck","enabled":true,"triggerType":"cron","cron":"35 6 * * 1","weekdayOnly":true,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-09-07T06:44:40.194000-04:00","nextFireAt":"2026-10-12T06:35:00-04:00","etaSeconds":234155.693806,"etaLabel":"2d 17h","runCount":2,"angle":0.1047,"radius":0.679,"color":"#34d399"},{"id":"weekly-idea-digest","botId":"6a33ea82-5497-43fa-a644-aebed89a6bf6","botName":"Ryan","name":"Weekly idea digest","enabled":true,"triggerType":"cron","cron":"0 7 * * 1","weekdayOnly":true,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-09-14T07:10:04.241000-04:00","nextFireAt":"2026-10-12T07:00:00-04:00","etaSeconds":235655.693806,"etaLabel":"2d 17h","runCount":1,"angle":5.6898,"radius":0.289,"color":"#a78bfa"},{"id":"weekday-family-calendar-scan","botId":"e1bfeb52-89c2-48fa-b6dd-b4dcf9ed54e1","botName":"Pam","name":"Weekday family calendar scan","enabled":true,"triggerType":"cron","cron":"30 7 * * 1-5","weekdayOnly":true,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-08-21T07:34:38.981000-04:00","nextFireAt":"2026-10-12T07:30:00-04:00","etaSeconds":237455.693806,"etaLabel":"2d 17h","runCount":18,"angle":2.5307,"radius":0.3475,"color":"#facc15"},{"id":"morning-attention-brief","botId":"84ee99ac-e314-4642-a27b-89b81a591547","botName":"Brief","name":"Morning attention brief","enabled":true,"triggerType":"cron","cron":"0 8 * * 1-5","weekdayOnly":true,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-09-09T08:09:20.534000-04:00","nextFireAt":"2026-10-12T08:00:00-04:00","etaSeconds":239255.693806,"etaLabel":"2d 18h","runCount":3,"angle":1.693,"radius":0.3605,"color":"#e879f9"},{"id":"weekly-household-cash-snapshot","botId":"5ea76ec0-2e44-46be-993a-11bc6ba30958","botName":"Oscar","name":"Weekly household cash snapshot","enabled":true,"triggerType":"cron","cron":"15 8 * * 1","weekdayOnly":true,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-09-14T08:42:49.525000-04:00","nextFireAt":"2026-10-12T08:15:00-04:00","etaSeconds":240155.693806,"etaLabel":"2d 18h","runCount":1,"angle":5.1487,"radius":0.3475,"color":"#f472b6"},{"id":"watch-for-kia-finance-statement","botId":"5ea76ec0-2e44-46be-993a-11bc6ba30958","botName":"Oscar","name":"Watch for Kia Finance statement","enabled":true,"triggerType":"cron","cron":"31 8 * * 1-5","weekdayOnly":true,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-08-21T08:38:05.272000-04:00","nextFireAt":"2026-10-12T08:31:00-04:00","etaSeconds":241115.693806,"etaLabel":"2d 18h","runCount":16,"angle":0.733,"radius":0.588,"color":"#f472b6"},{"id":"due-soon-bills-and-money-surprises","botId":"5ea76ec0-2e44-46be-993a-11bc6ba30958","botName":"Oscar","name":"Due-soon bills and money surprises","enabled":true,"triggerType":"cron","cron":"45 8 * * 1-5","weekdayOnly":true,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-09-14T08:59:56.901000-04:00","nextFireAt":"2026-10-12T08:45:00-04:00","etaSeconds":241955.693806,"etaLabel":"2d 19h","runCount":2,"angle":2.3387,"radius":0.471,"color":"#f472b6"},{"id":"jim-daily-interest-note","botId":"4feb1fc5-075b-4294-a694-3fa562e5785b","botName":"Michael","name":"Jim daily interest note","enabled":false,"triggerType":"cron","cron":"0 20 * * *","weekdayOnly":false,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-08-21T20:02:25.167000-04:00","nextFireAt":null,"etaSeconds":null,"etaLabel":"paused","runCount":17,"angle":5.7421,"radius":0.4385,"color":"#fbbf24"},{"id":"morning-attention-brief","botId":"4feb1fc5-075b-4294-a694-3fa562e5785b","botName":"Michael","name":"Morning attention brief","enabled":false,"triggerType":"cron","cron":"0 8 * * 1-5","weekdayOnly":true,"quietHours":false,"lastStatus":"ok","lastRunAt":"2026-08-21T08:07:07.873000-04:00","nextFireAt":null,"etaSeconds":null,"etaLabel":"paused","runCount":13,"angle":2.3911,"radius":0.6205,"color":"#fbbf24"}],"counts":{"bots":17,"routines":15,"enabled":13,"paused":2,"cron":15,"event":0,"weekdayOnly":9,"quietHours":0}};
+
+</script>
+  <script>
+/* Routine Radar UI — uses window.RR_DATA from data.js */
+(function () {
+  const DATA = window.RR_DATA || { bots: [], routines: [], counts: {}, generatedAt: null };
+  const canvas = document.getElementById("radar");
+  const ctx = canvas.getContext("2d");
+  const listEl = document.getElementById("list");
+  const detailEl = document.getElementById("detail");
+  const kpis = document.getElementById("kpis");
+  const gen = document.getElementById("gen");
+  let filter = "all";
+  let query = "";
+  let selected = null;
+  let sweep = 0;
+  let hover = null;
+
+  function filtered() {
+    const q = query.trim().toLowerCase();
+    return (DATA.routines || []).filter((r) => {
+      if (filter === "enabled" && !r.enabled) return false;
+      if (filter === "paused" && r.enabled) return false;
+      if (filter === "cron" && r.triggerType !== "cron") return false;
+      if (filter === "event" && r.triggerType !== "event") return false;
+      if (filter === "weekday" && !r.weekdayOnly) return false;
+      if (filter === "quiet" && !r.quietHours) return false;
+      if (!q) return true;
+      return (r.name + " " + r.botName + " " + (r.cron || "")).toLowerCase().includes(q);
+    });
+  }
+
+  function fmtWhen(iso) {
+    if (!iso) return "—";
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString("en-US", { timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " ET";
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  function renderKpis() {
+    const c = DATA.counts || {};
+    const items = [
+      ["Bots", c.bots || 0],
+      ["Routines", c.routines || 0],
+      ["Enabled", c.enabled || 0],
+      ["Paused", c.paused || 0],
+      ["Cron", c.cron || 0],
+    ];
+    kpis.innerHTML = items.map(([l, v]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+    gen.textContent = DATA.generatedAt
+      ? "Snapshot " + new Date(DATA.generatedAt).toLocaleString("en-US", { timeZone: "America/New_York", dateStyle: "medium", timeStyle: "short" }) + " ET"
+      : "No snapshot";
+  }
+
+  function renderList() {
+    const rows = filtered();
+    if (!rows.length) {
+      listEl.innerHTML = `<div class="row"><div></div><div><div class="name">No routines match</div><div class="meta">Try another filter or wait for collector data</div></div><div></div></div>`;
+      return;
+    }
+    listEl.innerHTML = rows.map((r) => {
+      const bad = r.lastStatus && r.lastStatus !== "ok";
+      const cls = [!r.enabled && "paused", bad && "bad", selected && selected.id === r.id && selected.botId === r.botId && "sel"].filter(Boolean).join(" ");
+      return `<div class="row ${cls}" data-id="${r.botId}::${r.id}">
+        <div class="dot" style="color:${r.color};background:${r.color}"></div>
+        <div><div class="name">${esc(r.name)}</div><div class="meta">${esc(r.botName)} · ${r.triggerType}${r.weekdayOnly ? " · weekday" : ""}${r.quietHours ? " · quiet" : ""}</div></div>
+        <div class="eta">${esc(r.etaLabel || "—")}</div>
+      </div>`;
+    }).join("");
+    listEl.querySelectorAll(".row[data-id]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const [botId, id] = el.getAttribute("data-id").split("::");
+        select(DATA.routines.find((x) => x.botId === botId && x.id === id));
+      });
+    });
+  }
+
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function select(r) {
+    selected = r || null;
+    renderList();
+    if (!r) {
+      detailEl.className = "detail empty";
+      detailEl.innerHTML = `<div class="empty-msg">Select a routine blip or row</div>`;
+      return;
+    }
+    detailEl.className = "detail";
+    const tags = [
+      r.enabled ? `<span class="tag on">enabled</span>` : `<span class="tag off">paused</span>`,
+      `<span class="tag">${esc(r.triggerType)}</span>`,
+      r.weekdayOnly ? `<span class="tag warn">weekday</span>` : "",
+      r.quietHours ? `<span class="tag">quiet hours</span>` : "",
+      r.lastStatus ? `<span class="tag ${r.lastStatus === "ok" ? "on" : "err"}">last: ${esc(r.lastStatus)}</span>` : `<span class="tag off">no runs</span>`,
+    ].join("");
+    detailEl.innerHTML = `
+      <h2>${esc(r.name)}</h2>
+      <div class="bot" style="color:${r.color}">${esc(r.botName)}</div>
+      <div class="tags">${tags}</div>
+      <div class="grid2">
+        <div class="cell"><div class="l">Next fire</div><div class="v">${esc(fmtWhen(r.nextFireAt))}</div></div>
+        <div class="cell"><div class="l">ETA</div><div class="v">${esc(r.etaLabel)}</div></div>
+        <div class="cell"><div class="l">Last run</div><div class="v">${esc(fmtWhen(r.lastRunAt))}</div></div>
+        <div class="cell"><div class="l">Runs logged</div><div class="v">${r.runCount}</div></div>
+        <div class="cell" style="grid-column:1/-1"><div class="l">Schedule</div><div class="v"><code>${esc(r.cron || "(event / none)")}</code></div></div>
+      </div>`;
+  }
+
+  function blipXY(r, cx, cy, R) {
+    const rad = r.radius * R;
+    return [cx + Math.cos(r.angle) * rad, cy + Math.sin(r.angle) * rad];
+  }
+
+  function draw() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const css = canvas.clientWidth || 640;
+    canvas.width = Math.floor(css * dpr);
+    canvas.height = Math.floor(css * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const W = css, H = css;
+    const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.42;
+    ctx.clearRect(0, 0, W, H);
+
+    // rings
+    ctx.strokeStyle = "rgba(61,255,154,0.12)";
+    ctx.lineWidth = 1;
+    for (let i = 1; i <= 4; i++) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, (R * i) / 4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // crosshair
+    ctx.beginPath();
+    ctx.moveTo(cx - R - 8, cy); ctx.lineTo(cx + R + 8, cy);
+    ctx.moveTo(cx, cy - R - 8); ctx.lineTo(cx, cy + R + 8);
+    ctx.stroke();
+
+    // sweep wedge
+    const a0 = sweep;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+    grad.addColorStop(0, "rgba(61,255,154,0.18)");
+    grad.addColorStop(1, "rgba(61,255,154,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, R, a0 - 0.55, a0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(61,255,154,0.55)";
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a0) * R, cy + Math.sin(a0) * R);
+    ctx.stroke();
+
+    const rows = filtered();
+    rows.forEach((r) => {
+      const [x, y] = blipXY(r, cx, cy, R);
+      const isSel = selected && selected.id === r.id && selected.botId === r.botId;
+      const isHov = hover && hover.id === r.id && hover.botId === r.botId;
+      const alpha = r.enabled ? 1 : 0.35;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = r.color;
+      ctx.beginPath();
+      ctx.arc(x, y, isSel || isHov ? 7 : 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      if (isSel) {
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 11, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      // pulse for soon ETA
+      if (r.enabled && r.etaSeconds != null && r.etaSeconds < 3600) {
+        ctx.strokeStyle = r.color;
+        ctx.globalAlpha = 0.35 * alpha;
+        ctx.beginPath();
+        ctx.arc(x, y, 10 + (Math.sin(sweep * 4) + 1) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    });
+
+    // center label
+    ctx.fillStyle = "rgba(143,163,201,0.9)";
+    ctx.font = "11px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(rows.length + " blips", cx, cy + R + 22);
+  }
+
+  function hitTest(mx, my) {
+    const css = canvas.clientWidth || 640;
+    const cx = css / 2, cy = css / 2, R = Math.min(css, css) * 0.42;
+    let best = null, bestD = 14;
+    filtered().forEach((r) => {
+      const [x, y] = blipXY(r, cx, cy, R);
+      const d = Math.hypot(x - mx, y - my);
+      if (d < bestD) { bestD = d; best = r; }
+    });
+    return best;
+  }
+
+  canvas.addEventListener("click", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const r = hitTest(e.clientX - rect.left, e.clientY - rect.top);
+    if (r) select(r);
+  });
+  canvas.addEventListener("mousemove", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    hover = hitTest(e.clientX - rect.left, e.clientY - rect.top);
+    canvas.style.cursor = hover ? "pointer" : "crosshair";
+  });
+
+  document.getElementById("filters").addEventListener("click", (e) => {
+    const btn = e.target.closest(".chip");
+    if (!btn) return;
+    filter = btn.getAttribute("data-f");
+    document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c === btn));
+    renderList();
+  });
+  document.getElementById("q").addEventListener("input", (e) => {
+    query = e.target.value || "";
+    renderList();
+  });
+
+  function tick() {
+    sweep = (sweep + 0.02) % (Math.PI * 2);
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  renderKpis();
+  renderList();
+  select(null);
+  if (!(DATA.routines && DATA.routines.length)) {
+    detailEl.className = "detail empty";
+    detailEl.innerHTML = `<div class="empty-msg">No automations found — empty fleet snapshot (graceful).</div>`;
+  }
+  requestAnimationFrame(tick);
+})();
+
+</script>
+</body>
+</html>
