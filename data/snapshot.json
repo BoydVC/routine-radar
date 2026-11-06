@@ -163,7 +163,7 @@
   ],
   "routines": [
     {
-      "id": "char-weeknight-homework-check-in",
+      "id": "ri-weeknight-homework-check-in",
       "botId": "ff5dfcd2-09b9-49dd-952f-14893da73ab0",
       "botName": "Riley Tutor",
       "name": "Riley weeknight homework check-in",
@@ -183,7 +183,7 @@
       "color": "#fdba74"
     },
     {
-      "id": "vic-weeknight-homework-check-in",
+      "id": "jo-weeknight-homework-check-in",
       "botId": "7e4990fe-38aa-4d6d-aa6b-c87baad5f8d1",
       "botName": "Jordan Tutor",
       "name": "Jordan weeknight homework check-in",
